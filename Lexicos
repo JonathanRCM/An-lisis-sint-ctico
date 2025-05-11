@@ -1,0 +1,108 @@
+import ply.lex as lex
+import ply.yacc as yacc
+import tkinter as tk
+from tkinter import messagebox
+
+# Los lexicos pedidos
+tokens = (
+    'NUMERO', 'SUMA', 'RESTA', 'MULT', 'DIV',
+    'PAREN_I', 'PAREN_D',
+    'IF', 'ELSE', 'WHILE'
+)
+
+t_SUMA    = r'\+'
+t_RESTA   = r'-'
+t_MULT    = r'\*'
+t_DIV     = r'/'
+t_PAREN_I = r'\('
+t_PAREN_D = r'\)'
+
+def t_IF(t):
+    r'if'
+    return t
+
+def t_ELSE(t):
+    r'else'
+    return t
+
+def t_WHILE(t):
+    r'while'
+    return t
+
+def t_NUMERO(t):
+    r'\d+(\.\d+)?'
+    t.value = float(t.value) if '.' in t.value else int(t.value)
+    return t
+
+t_ignore = ' \t'
+
+def t_error(t):
+    messagebox.showerror("Error léxico", f"Carácter ilegal: '{t.value[0]}'")
+    t.lexer.skip(1)
+
+lexer = lex.lex()
+
+# Sintaxis organizada
+precedence = (
+    ('left', 'SUMA', 'RESTA'),
+    ('left', 'MULT', 'DIV'),
+)
+
+def p_expresion_binaria(p):
+    '''expresion : expresion SUMA expresion
+                 | expresion RESTA expresion
+                 | expresion MULT expresion
+                 | expresion DIV expresion'''
+    if p[2] == '+': p[0] = p[1] + p[3]
+    elif p[2] == '-': p[0] = p[1] - p[3]
+    elif p[2] == '*': p[0] = p[1] * p[3]
+    elif p[2] == '/': p[0] = p[1] / p[3]
+
+def p_expresion_numero(p):
+    'expresion : NUMERO'
+    p[0] = p[1]
+
+def p_expresion_parentesis(p):
+    'expresion : PAREN_I expresion PAREN_D'
+    p[0] = p[2]
+
+def p_expresion_clave(p):
+    '''expresion : IF
+                 | ELSE
+                 | WHILE'''
+    messagebox.showinfo("Palabra clave", f"Palabra clave reconocida: {p[1]}")
+    p[0] = None
+
+def p_error(p):
+    messagebox.showerror("Error de sintaxis", "Expresión no válida.")
+
+parser = yacc.yacc()
+
+
+def analizar_expresion():
+    entrada = entrada_texto.get()
+    if entrada:
+        resultado = parser.parse(entrada)
+        if resultado is not None:
+            messagebox.showinfo("Resultado", f"Resultado: {resultado}")
+        entrada_texto.delete(0, tk.END)
+        preguntar_continuar()
+
+def preguntar_continuar():
+    respuesta = messagebox.askyesno("Continuar", "¿Deseas analizar otra expresión?")
+    if not respuesta:
+        ventana.destroy()
+
+
+ventana = tk.Tk()
+ventana.title("Analizador Léxico y Sintáctico")
+ventana.geometry("400x250")
+
+tk.Label(ventana, text="Ingresa una expresión:", font=("Arial", 12)).pack(pady=10)
+
+entrada_texto = tk.Entry(ventana, font=("Arial", 12), width=30)
+entrada_texto.pack(pady=5)
+
+tk.Button(ventana, text="Analizar", command=analizar_expresion).pack(pady=10)
+
+ventana.mainloop()
